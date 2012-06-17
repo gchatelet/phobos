@@ -7,21 +7,43 @@
  *  Elements of Programming),
  *   Alexander Stepanov and Paul McJones (Addison-Wesley Professional, June 2009)
  *
- * Authors: Guillaume Chatelet
+ * Author: Guillaume Chatelet
  */
 
+/**
+Definitions:
+$(UL
+$(LI
+$(B Type Attribute)
+A type attribute is a mapping from a type to a value describing some
+characteristic of the type.
+)
+$(LI
+$(B Type Function)
+A type function is a mapping from a type to an affiliated type.
+)
+$(LI
+$(B Concept)
+A concept is a description of requirements on one or more types stated in 
+terms of the existence and properties of procedures, type attributes, and
+type functions defined on the types.
+)
+$(LI
+$(B Property)
+A property is a predicate used in specifications to describe behavior
+of particular objects.
+)
+)
+*/
 module std.traits2;
 
 import std.traits;
 import std.typetuple;
 
-// Type attributes
-// A type attribute is a mapping from a type to a value describing some characteristic of the type.
-
 /**
 The number of arguments or operands that $(D_PARAM F) takes
 
-$(I Type Attribute)
+Type Attribute
 Examples:
 ---
 void foo(){}
@@ -41,16 +63,10 @@ unittest {
 	static assert(Arity!bar==1);
 }
 
-// Properties
-// A property is a predicate used in specifications to describe behavior of particular objects.
-
-// Type functions
-// A type function is a mapping from a type to an affiliated type.
-
 /**
 A TypeTuple of the unqualified Type arguments of $(D_PARAM F)
 
-$(I Type Function)
+Type Function
  */
 template UnqualParameterTuple(alias F) {
 	alias staticMap!(Unqual, ParameterTypeTuple!F) UnqualParameterTuple;
@@ -65,7 +81,7 @@ unittest {
 /**
 Type of the $(D_PARAM index)-th argument of $(D_PARAM F)
 
-$(I Type Function)
+Type Function
 Examples:
 ---
 void foo(byte,const uint);
@@ -86,7 +102,7 @@ unittest {
 /**
 Return type of $(D_PARAM F)
 
-$(I Type Function)
+Type Function
  */
 template CoDomain(alias F){
 	alias ReturnType!F CoDomain;
@@ -95,7 +111,7 @@ template CoDomain(alias F){
 /**
 Type of the first argument of an UnaryFunction or HomogeneousFunction 
 
-$(I Type Function)
+Type Function
  */
 template Domain(alias F) {
 	static if(isUnaryFunction!F || isHomogeneousFunction!F)
@@ -105,7 +121,7 @@ template Domain(alias F) {
 /**
 Checks if $(D_PARAM T) has a default constructor
 
-$(I Concept)
+Concept
  */
 template isDefaultConstructible(T) {
 	enum bool isDefaultConstructible = is(typeof({T t;}));
@@ -122,7 +138,7 @@ unittest {
 /**
 Checks if $(D_PARAM T) has a copy constructor
 
-$(I Concept)
+Concept
  */
 template isCopyConstructible(T) {
 	enum bool isCopyConstructible = isNumeric!T || is(typeof({
@@ -136,13 +152,13 @@ unittest {
 	struct CopyConstructible{this(CopyConstructible other){}};
 	static assert(isCopyConstructible!CopyConstructible);
 	struct NotCopyConstructible{};
-	static assert(!isCopyConstructible!NotCopyConstructible);
+	static assert(isCopyConstructible!NotCopyConstructible==false);
 }
 
 /**
 Checks if $(D_PARAM Lhs) is assignable from $(D_PARAM Rhs) 
 
-$(I Concept)
+Concept
  */
 template isAssignable(Lhs, Rhs=Lhs)
 {
@@ -156,17 +172,17 @@ template isAssignable(Lhs, Rhs=Lhs)
 
 unittest
 {
-    static assert( isAssignable!(long, int));
-    static assert( isAssignable!(const(char)[], string));
+    static assert(isAssignable!(long, int));
+    static assert(isAssignable!(const(char)[], string));
 
-    static assert(!isAssignable!(int, long));
-    static assert(!isAssignable!(string, char[]));
+    static assert(isAssignable!(int, long)==false);
+    static assert(isAssignable!(string, char[])==false);
 }
 
 /**
 Checks if $(D_PARAM Lhs) is equality comparable to $(D_PARAM Rhs) 
 
-$(I Concept)
+Concept
  */
 template isEqualityComparable(Lhs, Rhs=Lhs) {
 	enum bool isEqualityComparable = is(typeof({
@@ -181,13 +197,13 @@ unittest {
 	static assert(isEqualityComparable!(uint,double));
 	struct AStruct{}
 	static assert(isEqualityComparable!AStruct); // struct are comparable by default
-	static assert(!isEqualityComparable!(uint,AStruct));
+	static assert(isEqualityComparable!(uint,AStruct)==false);
 }
 
 /**
 Checks if $(D_PARAM Lhs) is less comparable to $(D_PARAM Rhs)
 
-$(I Concept)
+Concept
  */
 template isLessComparable(Lhs, Rhs=Lhs) {
 	enum bool isLessComparable = is(typeof({
@@ -202,16 +218,11 @@ unittest {
 	static assert(isLessComparable!(uint,double));
 	// struct are not less comparable by default
 	struct AStruct;
-	static assert(!isLessComparable!AStruct);
-	static assert(!isLessComparable!(uint,AStruct));
+	static assert(isLessComparable!AStruct==false);
+	static assert(isLessComparable!(uint,AStruct)==false);
 	struct Comparable{int opCmp(Comparable rhs){return 0;}}
 	static assert(isLessComparable!Comparable);
 }
-
-// Concepts
-// A concept is a description of requirements on one or more types stated in 
-// terms of the existence and properties of procedures, type attributes, and
-// type functions defined on the types.
 
 // Chapter 1: Foundations
 
@@ -220,24 +231,30 @@ $(D_PARAM T)'s computational basis includes equality, assignment, destructor,
 default constructor, copy constructor, total ordering 
 (or default total ordering) and underlying type.
 
-The authors require $(D_PARAM T) to provide an $(I underlying type) to allow 
+Regularity is fundamental to Concepts as it enables $(I equationnal reasoning).
+
+Note 1 : The authors require $(D_PARAM T) to provide an $(I underlying type) to allow 
 good performance in swapping heavyweight structures.$(BR)
 For this purpose, $(D_PSYMBOL std.algorithm.swap) makes use of $(D_PSYMBOL proxySwap)
 where available so the requirements for an $(I underlying type) is relaxed.
 
-Although the semantic of total ordering is mandatory this template can only check
+Note 2 : Although the semantic of total ordering is mandatory this template can only check
 for syntactic requirements involving the $(D_KEYWORD opCmp) function.
 
-$(I Concept)
+Concept
  */
 template isRegular(T) {
-	enum bool isRegular = isEqualityComparable!T && isAssignable!(T,T) && isDefaultConstructible!T && isCopyConstructible!T && isLessComparable!T;
+	enum bool isRegular = isEqualityComparable!T && 
+						  isAssignable!(T,T) &&
+						  isDefaultConstructible!T && 
+						  isCopyConstructible!T &&
+						  isLessComparable!T;
 }
 
 unittest {
 	static assert(isRegular!uint);
 	struct AStruct{}
-	static assert(!isRegular!AStruct);
+	static assert(isRegular!AStruct==false);
 	struct BStruct{
 		this(BStruct other){}
 		int opCmp(BStruct rhs){return 0;}
@@ -250,9 +267,12 @@ unittest {
 $(D_PARAM F) is a regular procedure defined on regular types: replacing its inputs
 with equal objects results in equal output objects.
 
-In D isFunctionalProcedure means $(D_PARAM F) is a $(D_KEYWORD pure) function and its parameter types are Regular.
+In D FunctionalProcedure means $(D_PARAM F) is a $(D_KEYWORD pure) function and its parameter types are Regular.
 
-$(I Concept)
+Concept
+
+Property: $(I regular_function)
+"Application of equal functions to equal arguments gives equal results"
  */
 template isFunctionalProcedure(alias F) {
 	enum bool isFunctionalProcedure = (functionAttributes!F & FunctionAttribute.pure_) && is(typeof({
@@ -271,13 +291,12 @@ unittest {
 /**
 $(D_PARAM F) is a FunctionalProcedure of Arity == 1  
 
-$(I Concept)
+Concept
 
-property : regular_unary_function
+Property: $(I regular_unary_function)
  */
 template isUnaryFunction(alias F) {
 	enum bool isUnaryFunction = isFunctionalProcedure!F && Arity!F==1;
-	alias InputType!(F,0) Domain;
 }
 
 unittest {
@@ -288,7 +307,7 @@ unittest {
 /**
 $(D_PARAM F) is a FunctionalProcedure of Arity > 0 which arguments are of same types
 
-$(I Concept)
+Concept
  */
 template isHomogeneousFunction(alias F) {
 	alias UnqualParameterTuple!F ParameterTypes;
@@ -310,7 +329,7 @@ unittest {
 $(D_PARAM F) is a FunctionalProcedure and its return type is bool
 $(BR)NB : Maybe extend isPredicate to a return type convertible to bool.
 
-$(I Concept)
+Concept
  */
 template isPredicate(alias F) {
 	enum bool isPredicate = isFunctionalProcedure!F && is(CoDomain!F == bool);
@@ -326,7 +345,7 @@ unittest {
 /**
 $(D_PARAM F) is a Predicate and all its arguments are of same type
 
-$(I Concept)
+Concept
  */
 template isHomogeneousPredicate(alias F) {
 	enum bool isHomogeneousPredicate = isPredicate!F && isHomogeneousFunction!F;
@@ -342,7 +361,7 @@ unittest {
 /**
 $(D_PARAM F) is a Predicate and an UnaryFunction
 
-$(I Concept)
+Concept
  */
 template isUnaryPredicate(alias F) {
 	enum bool isUnaryPredicate = isPredicate!F && isUnaryFunction!F;
@@ -358,7 +377,7 @@ unittest {
 /**
 $(D_PARAM F) is an HomogeneousFunction and the CoDomain of $(D_PARAM F) is equal its Domain.
 
-$(I Concept)
+Concept
  */
 template isOperation(alias F) {
 	enum bool isOperation = isHomogeneousFunction!F && is(CoDomain!F == Domain!F);
@@ -376,7 +395,7 @@ unittest {
 /**
 $(D_PARAM F) is an Operation and an UnaryFunction
 
-$(I Concept)
+Concept
  */
 template isTransformation(alias F) {
 	enum bool isTransformation = isOperation!F && isUnaryFunction!F;
@@ -389,14 +408,51 @@ unittest {
 	static assert(isTransformation!bar==false);
 }
 
+/**
+Default implementation of DistanceType for function of integral type
+
+Type Function
+ */
+template DistanceType(alias F) if(isIntegral!(Domain!F) && isTransformation!F) {
+	alias size_t DistanceType; 
+}
+
+unittest {
+	uint foo(uint) pure {return 0;}
+	static assert(is(DistanceType!foo==size_t));
+	float bar(float) pure {return 0;}
+	static assert(is(typeof(DistanceType!bar))==false);
+}
+
+/**
+Count the number of steps from $(D_PARAM x) to $(D_PARAM y) under application of $(D_PARAM F)
+Precondition:
+$(D_PARAM y) is reachable from $(D_PARAM x) under F
+ */
+DistanceType!F distance(alias F)(Domain!F x, Domain!F y) pure {
+	static assert(isTransformation!F);
+	DistanceType!F n;
+	while(x!=y) {
+		x = F(x);
+		n = n + 1;
+	}
+	return n;
+}
+
+unittest {
+	static assert(distance!(successor!uint)(0,3)==3);
+	static assert(distance!(twice!uint)(1,32)==5);
+	static assert(distance!(half_nonnegative!uint)(32,2)==4);
+}
+
 // Chapter 3: Associative Operations
 
 /**
 $(D_PARAM F) is an Operation of Arity 2.
 
-$(I Concept)
+Concept
 
-property : associative
+Property: associative
  */
 template isBinaryOperation(alias F) {
 	enum bool isBinaryOperation = isOperation!F && Arity!F==2;
@@ -449,22 +505,22 @@ $(BR) n → (n mod 2) = 0
 odd : I → bool
 $(BR) n → (n mod 2) != 0
 
-$(I Concept)
+Concept
  */
 template isInteger(I) {
 	enum bool isInteger =
-		is(CoDomain!(successor!I)==I) &&
-		is(CoDomain!(predecessor!I)==I) &&
-		is(CoDomain!(twice!I)==I) &&
-		is(CoDomain!(half_nonnegative!I)==I) &&
-		is(CoDomain!(binary_scale_down_nonnegative!(I,I))==I) &&
-		is(CoDomain!(binary_scale_up_nonnegative!(I,I))==I) &&
-		is(CoDomain!(positive!I)==bool) &&
-		is(CoDomain!(negative!I)==bool) &&
-		is(CoDomain!(zero!I)==bool) &&
-		is(CoDomain!(one!I)==bool) &&
-		is(CoDomain!(even!I)==bool) &&
-		is(CoDomain!(odd!I)==bool);
+		isTransformation!(successor!I) &&
+		isTransformation!(predecessor!I) &&
+		isTransformation!(twice!I) &&
+		isTransformation!(half_nonnegative!I) &&
+		isHomogeneousFunction!(binary_scale_down_nonnegative!I) &&
+		isHomogeneousFunction!(binary_scale_up_nonnegative!I) &&
+		isUnaryPredicate!(positive!I) &&
+		isUnaryPredicate!(negative!I) &&
+		isUnaryPredicate!(zero!I) &&
+		isUnaryPredicate!(one!I) &&
+		isUnaryPredicate!(even!I) &&
+		isUnaryPredicate!(odd!I);
 }
 
 I successor(I)(I n) pure nothrow { 
@@ -483,11 +539,11 @@ I half_nonnegative(I)(I n) pure nothrow if(isUnsigned!I) {
 	return n/2;
 }
 
-I binary_scale_down_nonnegative(I,K)(I n,K k) pure if(isUnsigned!I && isUnsigned!K) { 
+I binary_scale_down_nonnegative(I)(I n,I k) pure if(isUnsigned!I) { 
 	return n/std.math.pow(2,k);
 }
 
-I binary_scale_up_nonnegative(I,K)(I n,K k) pure if(isUnsigned!I && isUnsigned!K) { 
+I binary_scale_up_nonnegative(I)(I n,I k) pure if(isUnsigned!I) { 
 	return std.math.pow(2,k)*n;
 }
 
@@ -524,11 +580,9 @@ unittest {
 /**
 $(D_PARAM F) is an HomogeneousPredicate of Arity==2
 
-$(I Concept)
+Concept
 
-properties :
-
-transitive, strict, reflexive, symmetric, asymmetric, equivalence, key function, total ordering, weak ordering
+Property: transitive, strict, reflexive, symmetric, asymmetric, equivalence, key function, total ordering, weak ordering
  */
 template isRelation(alias F) {
 	enum bool isRelation = isHomogeneousPredicate!F && Arity!F==2;
@@ -539,6 +593,14 @@ unittest {
 	static assert(isRelation!foo);
 }
 
-//template TotallyOrdered(T) {
-//	enum bool TotallyOrdered = isRegular!T && is(typeof(total_ordering!T));
-//}
+/**
+$(D_PARAM F) is Regular and totally ordered
+
+Concept
+ */
+template TotallyOrdered(T) {
+	enum bool TotallyOrdered = isRegular!T && isLessComparable!T;
+}
+
+// Chapter 5: Ordered Algebraic Structures
+
