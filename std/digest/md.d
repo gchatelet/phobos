@@ -589,3 +589,10 @@ unittest
                                    "1234567890123456789012345678901234567890")
            == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
 }
+
+unittest {
+    alias hashFun = function (const ubyte[] blob, uint seed, ubyte[] output) {
+        output[] = digest!MD5(blob)[0..4];
+    };
+    assert(VerificationTest(hashFun,  32, 0xC10C356B));
+}

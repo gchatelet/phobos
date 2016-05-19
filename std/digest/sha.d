@@ -1284,3 +1284,10 @@ unittest
     onemilliona[] = 'a';
     assert(sha.digest(onemilliona) == cast(ubyte[])x"34aa973cd4c4daa4f61eeb2bdbad27316534016f");
 }
+
+unittest {
+    alias hashFun = function (const ubyte[] blob, uint seed, ubyte[] output) {
+        output[] = digest!SHA1(blob)[0..4];
+    };
+    assert(VerificationTest(hashFun,  32, 0x2D0B8426));
+}

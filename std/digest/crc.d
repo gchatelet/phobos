@@ -155,6 +155,11 @@ struct CRC32
         uint _state = uint.max;
 
     public:
+        this(uint seed) @safe
+        {
+            _state = seed ^ uint.max;
+        }
+
         /**
          * Use this to feed the digest with data.
          * Also implements the $(XREF_PACK range,primitives,isOutputRange)
@@ -459,4 +464,13 @@ unittest
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     digest = crc32Of(oneMillionRange);
     assert(digest == cast(ubyte[])x"BCBF25DC");
+}
+
+unittest {
+    alias hashFun = function (const ubyte[] blob, uint seed, ubyte[] output) @safe {
+        auto hash = CRC32(seed);
+        hash.put(blob);
+        output[] = hash.finish();
+    };
+    assert(VerificationTest(hashFun,  32, 0x3719DB20));
 }

@@ -991,3 +991,46 @@ unittest
     //necessary, result will have the correct length, but buf will still have it's original
     //length
 }
+
+/**
+ * 
+ */
+version(unittest) {
+    bool VerificationTest ( pfHash hash, const uint hashbits, uint expected) @safe
+    {
+        const uint hashbytes = hashbits / 8;
+
+        scope ubyte[] key = new ubyte[256];
+        scope ubyte[] hashes = new ubyte[hashbytes * 256];
+        scope ubyte[] final_hash = new ubyte[hashbytes];
+
+        // Hash keys of the form {0}, {0,1}, {0,1,2}... up to N=255,using 256-N as the seed
+        foreach(int i; 0..256)
+        {
+            key[i] = cast(ubyte)i;
+
+            hash(key[0..i],256-i,hashes[i*hashbytes..(i+1)*hashbytes]);
+        }
+
+        // Then hash the result array
+        hash(hashes,0,final_hash);
+
+        // The first four bytes of that hash, interpreted as a little-endian integer, is our
+        // verification value
+        uint verification = (final_hash[0] << 0) | (final_hash[1] << 8) | (final_hash[2] << 16) | (final_hash[3] << 24);
+
+        //----------
+        import std.stdio;
+        if(expected != verification)
+        {
+            writefln("Verification value 0x%08X : Failed! (Expected 0x%08X)\n", verification, expected);
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    @safe alias pfHash = void function(const ubyte[] blob, uint seed, ubyte[] output);
+}
